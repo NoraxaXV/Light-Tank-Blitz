@@ -15,26 +15,28 @@ public class PlayerController : NetworkBehaviour
     public float rotateSpeed = 90;
 
     Rigidbody rb;
-    CinemachineClearShot mainCamera;
+    CinemachineVirtualCameraBase mainCamera;
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
     }
-    public override void OnStartClient()
+    public override void OnStartLocalPlayer()
     {
         try
         {
-            mainCamera = GameObject.FindObjectOfType<CinemachineClearShot>();
+            mainCamera = GameObject.FindObjectOfType<CinemachineVirtualCameraBase>();
         }
-        catch (Exception e) {
+        catch (Exception e)
+        {
             Debug.LogError("Error finding main camera!");
             throw e;
         }
 
         mainCamera.Follow = this.transform;
         mainCamera.LookAt = this.transform;
+
     }
 
     void Update()
@@ -44,10 +46,11 @@ public class PlayerController : NetworkBehaviour
         var forwardInput = Input.GetAxis("Vertical");
         var turnInput = Input.GetAxis("Horizontal");
 
-        var moveForce = new Vector3(0, 0, forwardInput * moveSpeed * Time.deltaTime);
-        var turnForce = new Vector3(0, turnInput * rotateSpeed * Time.deltaTime, 0);
+        var moveForce = forwardInput * moveSpeed * Time.deltaTime;
+        var turnForce = turnInput * rotateSpeed * Time.deltaTime;
 
-        rb.AddRelativeTorque(turnForce);
-        rb.AddRelativeForce(moveForce);
+        rb.AddRelativeForce(Vector3.forward * moveForce);
+        // rb.AddRelativeTorque(Vector3.up * turnForce, ForceMode.Impulse);
+        transform.RotateAround(Vector3.up, turnForce);
     }
 }
