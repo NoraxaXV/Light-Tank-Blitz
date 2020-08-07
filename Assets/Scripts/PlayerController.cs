@@ -1,5 +1,6 @@
 ﻿// Ignores the obselete warnings for using Unity UNet
 #pragma warning disable 0618
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,6 +15,12 @@ public class PlayerController : NetworkBehaviour
     public float moveSpeed = 10;
     public float rotateSpeed = 90;
 
+    [Header("Bullet Properties")]
+    [SerializeField] GameObject bulletPrefab;
+    [SerializeField] Transform bulletSpawnPos;
+    [SerializeField] float bulletSpeed = 1000;
+    [SerializeField] float bulletLifeTime = 10;
+
     Rigidbody rb;
     CinemachineVirtualCameraBase mainCamera;
 
@@ -24,16 +31,8 @@ public class PlayerController : NetworkBehaviour
     }
     public override void OnStartLocalPlayer()
     {
-        try
-        {
-            mainCamera = GameObject.FindObjectOfType<CinemachineVirtualCameraBase>();
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error finding main camera!");
-            throw e;
-        }
-
+        
+        mainCamera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CinemachineVirtualCameraBase>();
         mainCamera.Follow = this.transform;
         mainCamera.LookAt = this.transform;
 
@@ -41,16 +40,37 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
-        if (!isLocalPlayer) return;
+        if (isLocalPlayer)
+        {
 
-        var forwardInput = Input.GetAxis("Vertical");
-        var turnInput = Input.GetAxis("Horizontal");
+            float forwardInput = Input.GetAxis("Vertical");
+            float turnInput = Input.GetAxis("Horizontal");
+            bool wantToFire = Input.GetButtonDown("Fire1");
 
-        var moveForce = forwardInput * moveSpeed * Time.deltaTime;
-        var turnForce = turnInput * rotateSpeed * Time.deltaTime;
+            float moveForce = forwardInput * moveSpeed * Time.deltaTime;
+            float turnForce = turnInput * rotateSpeed * Time.deltaTime;
 
-        rb.AddRelativeForce(Vector3.forward * moveForce);
-        // rb.AddRelativeTorque(Vector3.up * turnForce, ForceMode.Impulse);
-        transform.RotateAround(Vector3.up, turnForce);
+            rb.AddRelativeForce(Vector3.forward * moveForce);
+            transform.RotateAround(Vector3.up, turnForce);
+
+            if (wantToFire) {
+                CmdFire();
+            }
+        }
+    }
+
+    [Command]
+    void CmdFire()
+    {
+        GameObject bullet = Instantiate(
+            bulletPrefab,
+            bulletSpawnPos.position,
+            bulletSpawnPos.rotation);
+
+        Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
+        bulletRb.AddRelativeForce(Vector3.forward*bulletSpeed, ForceMode.VelocityChange);
+        Destroy(bullet, bulletLifeTime);
+
+        NetworkServer.Spawn(bullet);
     }
 }
