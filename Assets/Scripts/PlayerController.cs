@@ -20,6 +20,7 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] Transform bulletSpawnPos;
     [SerializeField] float bulletSpeed = 1000;
     [SerializeField] float bulletLifeTime = 10;
+    [SerializeField] Transform gunTransform;
 
     Rigidbody rb;
     CinemachineVirtualCameraBase mainCamera;
@@ -73,7 +74,6 @@ public class PlayerController : NetworkBehaviour
 
         NetworkServer.Spawn(bullet);
         RpcAcknowlegdeFire(bullet);
-
     }
 
     [ClientRpc]
@@ -81,5 +81,6 @@ public class PlayerController : NetworkBehaviour
     {
         Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
         bulletRb.AddRelativeForce(Vector3.forward * bulletSpeed, ForceMode.VelocityChange);
+        gunTransform.LookAt(bullet.transform);
     }
 }
