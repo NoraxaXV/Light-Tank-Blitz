@@ -68,9 +68,18 @@ public class PlayerController : NetworkBehaviour
             bulletSpawnPos.rotation);
 
         Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
-        bulletRb.AddRelativeForce(Vector3.forward*bulletSpeed, ForceMode.VelocityChange);
+        bulletRb.AddRelativeForce(Vector3.forward * bulletSpeed, ForceMode.VelocityChange);
         Destroy(bullet, bulletLifeTime);
 
         NetworkServer.Spawn(bullet);
+        RpcAcknowlegdeFire(bullet);
+
+    }
+
+    [ClientRpc]
+    void RpcAcknowlegdeFire(GameObject bullet)
+    {
+        Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
+        bulletRb.AddRelativeForce(Vector3.forward * bulletSpeed, ForceMode.VelocityChange);
     }
 }
