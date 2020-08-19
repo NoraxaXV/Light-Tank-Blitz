@@ -25,6 +25,8 @@ public class PlayerController : NetworkBehaviour
     Rigidbody rb;
     CinemachineVirtualCameraBase mainCamera;
 
+    Vector2 moveInput;
+    
     // Start is called before the first frame update
     void Start()
     {
@@ -43,20 +45,25 @@ public class PlayerController : NetworkBehaviour
     {
         if (isLocalPlayer)
         {
-
-            float forwardInput = Input.GetAxis("Vertical");
-            float turnInput = Input.GetAxis("Horizontal");
+            moveInput = new Vector2(
+                Input.GetAxis("Vertical"),
+                Input.GetAxis("Horizontal"));
             bool wantToFire = Input.GetButtonDown("Fire1");
-
-            float moveForce = forwardInput * moveSpeed * Time.deltaTime;
-            float turnForce = turnInput * rotateSpeed * Time.deltaTime;
-
-            rb.AddRelativeForce(Vector3.forward * moveForce);
-            transform.RotateAround(Vector3.up, turnForce);
 
             if (wantToFire) {
                 CmdFire();
             }
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (moveInput.x != 0 || moveInput.y != 0)
+        { 
+            Vector3 moveForce = Vector3.forward * (moveInput.x * moveSpeed);
+            float turnForce = moveInput.y * rotateSpeed;
+            Move(moveForce, turnForce);
+            CmdMove(moveForce, turnForce);
         }
     }
 
@@ -74,11 +81,33 @@ public class PlayerController : NetworkBehaviour
 
         NetworkServer.Spawn(bullet);
         RpcAcknowlegdeFire(bullet);
+
+    }
+    void Move(Vector3 moveForce, float turnForce)
+    {
+        rb.AddRelativeForce(moveForce * Time.deltaTime);
+        transform.RotateAround(Vector3.up, turnForce * Time.deltaTime);
+    }
+
+    [Command]
+    void CmdMove(Vector3 moveForce, float turnForce)
+    {
+        if (!isServer) return;
+        Move(moveForce, turnForce);
+        RpcSyncMoveOnClients(moveForce, turnForce);
+    }
+
+    [ClientRpc]
+    void RpcSyncMoveOnClients(Vector3 moveForce, float turnForce)
+    {
+        if (isServer || isLocalPlayer) return;
+        Move(moveForce, turnForce);
     }
 
     [ClientRpc]
     void RpcAcknowlegdeFire(GameObject bullet)
     {
+        if (isServer) return;
         Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
         bulletRb.AddRelativeForce(Vector3.forward * bulletSpeed, ForceMode.VelocityChange);
         gunTransform.LookAt(bullet.transform);
